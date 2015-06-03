@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
-import datetime
 import pwd
-import sys
-
-from datetime import datetime, timedelta
 
 from pysqlite2 import dbapi2 as sqlite  # https://github.com/ghaering/pysqlite
 
