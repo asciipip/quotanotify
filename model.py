@@ -6,13 +6,38 @@ import subprocess
 from datetime import datetime, timedelta
 
 import iso8601  # https://bitbucket.org/micktwomey/pyiso8601
+from enum import Enum  # https://pypi.python.org/pypi/enum34
 
 def parse_datetime(field):
     """Parses an ISO-8601-formatted datetime.  Returns None for None."""
     if field:
-        return iso8601.parse_date(field)
+        return iso8601.parse_date(field).replace(tzinfo=None)
     else:
         return None
+
+class QuotaState(Enum):
+    ok = 1
+    soft_limit = 2
+    hard_limit = 3
+
+def current_state(used, quota, limit, grace_expires):
+    if used < quota:
+        return QuotaState.ok
+    if used < limit and datetime.now() < grace_expires:
+        return QuotaState.soft_limit
+    return QuotaState.hard_limit
+
+def notification_state(ok_notify, quota_notify, hard_notify):
+    # Go with whichever notification was sent last.
+    pairs = [(ok_notify, QuotaState.ok),
+             (quota_notify, QuotaState.soft_limit),
+             (hard_notify, QuotaState.hard_limit)]
+    sorted_pairs = sorted([p for p in pairs if p[0]])
+    if len(sorted_pairs) > 0:
+        return sorted_pairs[-1][1]
+    else:
+        # No notifications ever sent, assume everything's okay.
+        return QuotaState.ok
 
 class AccountInfo:
     def __init__(self, filesystem, uid, db_cursor):
@@ -153,3 +178,25 @@ class AccountInfo:
                  self.inode_ok_notify and self.inode_ok_notify.isoformat(),
                  datetime.now().isoformat(),
                  self.username, self.filesystem, self.uid))
+
+    @property
+    def current_block_state(self):
+        return current_state(self.blocks_used, self.block_quota,
+                             self.block_limit, self.block_grace_expires)
+
+    @property
+    def current_inode_state(self):
+        return current_state(self.inodes_used, self.inode_quota,
+                             self.inode_limit, self.inode_grace_expires)
+
+    @property
+    def notification_block_state(self):
+        return notification_state(self.block_ok_notify,
+                                  self.block_quota_notify,
+                                  self.block_hard_notify)
+
+    @property
+    def notification_inode_state(self):
+        return notification_state(self.inode_ok_notify,
+                                  self.inode_quota_notify,
+                                  self.inode_hard_notify)
