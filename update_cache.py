@@ -1,73 +1,80 @@
 #!/usr/bin/env python
 
-import re
+import datetime
+import pwd
 import subprocess
+import sys
 
-from pysqlite2 import dbapi2 as sqlite
+from datetime import datetime, timedelta
+
+from pysqlite2 import dbapi2 as sqlite  # https://github.com/ghaering/pysqlite
+
 
 cache = sqlite.connect('cache')
 cur = cache.cursor()
 
-repquota = subprocess.Popen(['repquota', '-va'], stdout=subprocess.PIPE)
-repquota_out, ignored = repquota.communicate()
+# Get mounted filesystems with user quotas.
+filesystems = set()
+mtab = open('/etc/mtab')
+try:
+    for line in mtab:
+        dev, mountpoint, fstype, options, dump, fsck = line.split()
+        if 'usrquota' in options.split(','):
+            filesystems.add(mountpoint)
+finally:
+    mtab.close()
 
-for line in repquota_out.splitlines():
-    dev_match = re.search('^\\*\\*\\* Report for user quotas on device (.*)$',
-                          line)
-    if dev_match:
-        device = dev_match.group(1)
-        in_header = True
-        continue
-    if re.search('^-+$', line):
-        in_header = False
-        continue
-    if in_header:
-        continue
-    # In the below regex, grace periods could be five-character descriptions,
-    # e.g. "5days" or "25:32", or they could be blank (composed of spaces).
-    # That's the main reason we have to use a regex to parse this rather than
-    # just using line.split()
-    detail_match = re.search(r"""^([^ ]+)\ +    # username
-                                 ([-+]{2})\ +   # quota summary
-                                 ([0-9]+)\ +    # blocks used
-                                 ([0-9]+)\ +    # block soft limit
-                                 ([0-9]+)\ {2}  # block hard limit
-                                 (.....)\ +     # block grace period
-                                 ([0-9]+)\ +    # inodes used
-                                 ([0-9]+)\ +    # inode soft limit
-                                 ([0-9]+)\ {2}  # inode hard limit
-                                 (.....)$       # inode grace period
-                                 """, line, re.X)
-    if detail_match:
-        username = detail_match.group(1)
-        blocks_used      = int(detail_match.group(3))
-        block_soft_limit = int(detail_match.group(4))
-        block_hard_limit = int(detail_match.group(5))
-        inodes_used      = int(detail_match.group(7))
-        inode_soft_limit = int(detail_match.group(8))
-        inode_hard_limit = int(detail_match.group(9))
-        if detail_match.group(6).strip() != '':
-            print '"%s"' % detail_match.group(6)
+# Update quotas for every account on the system.
+for pwd_entry in pwd.getpwall():
+    for fs in filesystems:
+        qt = subprocess.Popen(['quotatool', '-u', str(pwd_entry.pw_uid), '-d', fs], stdout=subprocess.PIPE)
+        stdout, stderr = qt.communicate()
+        uid, qt_fs, \
+            blocks_used, block_quota, block_limit, block_grace, \
+            inodes_used, inode_quota, inode_limit, inode_grace = \
+            stdout.split()
+        block_grace = int(block_grace)
+        inode_grace = int(inode_grace)
+
+        if block_grace == 0:
+            block_grace_expires = None
+        else:
+            block_grace_expires = \
+                (datetime.now().replace(microsecond=0) + timedelta(seconds=block_grace)).isoformat()
+        if inode_grace == 0:
+            inode_grace_expires = None
+        else:
+            inode_grace_expires = \
+                (datetime.now().replace(microsecond=0) + timedelta(seconds=inode_grace)).isoformat()
         cur.execute("""UPDATE entry
                          SET blocks_used = ?,
                              block_soft_limit = ?,
                              block_hard_limit = ?,
                              inodes_used = ?,
                              inode_soft_limit = ?,
-                             inode_hard_limit = ?
+                             inode_hard_limit = ?,
+                             block_grace_expires = ?,
+                             inode_grace_expires = ?,
+                             last_update = ?,
+                             username = ?
                          WHERE filesystem = ?
-                           AND account = ?""",
-                    (blocks_used, block_soft_limit, block_hard_limit,
-                     inodes_used, inode_soft_limit, inode_hard_limit,
-                     device, username))
+                           AND uid = ?""",
+                    (blocks_used, block_quota, block_limit,
+                     inodes_used, inode_quota, inode_limit,
+                     block_grace_expires, inode_grace_expires,
+                     datetime.now().isoformat(),
+                     pwd_entry.pw_name, fs, pwd_entry.pw_uid))
         if cur.rowcount == 0:
             cur.execute("""INSERT INTO entry
                              (blocks_used, block_soft_limit, block_hard_limit,
                               inodes_used, inode_soft_limit, inode_hard_limit,
-                              filesystem, account)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (blocks_used, block_soft_limit, block_hard_limit,
-                     inodes_used, inode_soft_limit, inode_hard_limit,
-                     device, username))
+                              block_grace_expires, inode_grace_expires,
+                              last_update, username, filesystem, uid)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (blocks_used, block_quota, block_limit,
+                     inodes_used, inode_quota, inode_limit,
+                     block_grace_expires, inode_grace_expires,
+                     datetime.now().isoformat(),
+                     pwd_entry.pw_name, fs, pwd_entry.pw_uid))
 
 cache.commit()
