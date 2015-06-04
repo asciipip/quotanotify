@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+
+from jinja2 import Template
+
+STD_FOOTER = """
+For more information about our disk quotas, please see the following page:
+
+  https://help.example.com/Disk_Quotas
+
+If you have any questions, please email help@example.com .
+""".strip()
+
+class TemplateOverQuota:
+    subject = Template('Your account is over quota.')
+    header = ''
+    block_text = Template("""Your account ({{ai.username}}) is
+currently over the limit set for disk space usage.  You are currently
+using {{ai.bytes_used|filesizeformat(True)}} of data.  Your limit is
+{{ai.bytes_quota|filesizeformat(True)}}.  You should clear out some of
+your data to reduce your usage below your limit.""")
+    inode_text = Template("""Your account ({{ai.username}}) is
+currently over the limit set for number of files.  You currently have
+{{ai.inodes_used}} files.  Your limit is {{ai.inode_quota}} files.
+You should delete some of your files to reduce your usage below your
+limit.""")
+    footer = STD_FOOTER
+
+class TemplateHardLimit:
+    subject = Template('Your account is out of space.')
+    header = ''
+    block_text = Template("""Your account ({{ai.username}}) has hit
+the hard limit for amount of disk space usage.  You cannot create any
+new files or increase the size of existing ones until you reduce the
+amount of space you're using.  You are currently using
+{{ai.bytes_used|filesizeformat(True)}} of data.  Your quota is
+{{ai.bytes_quota|filesizeformat(True)}}.  You need to clear out some
+of your data to reduce your usage below your limit.""")
+    inode_text = Template("""Your account ({{ai.username}}) has hit
+the hard limit for number of files.  You cannot create any new files
+until you reduce the number of files in your account.  You currently
+have {{ai.inodes_used}} files.  Your limit is {{ai.inode_quota}}
+files.  You need to delete some of your files to reduce your usage
+below your limit.""")
+    footer = STD_FOOTER
+
+class TemplateGraceExpired:
+    subject = Template('Your account is out of space.')
+    header = ''
+    block_text = Template("""Your account ({{ai.username}}) has been
+using too much disk space for too long.  You cannot create any new
+files or increase the size of existing ones until you reduce the
+amount of space you're using.  You are currently using
+{{ai.bytes_used|filesizeformat(True)}} of data.  Your quota is
+{{ai.bytes_quota|filesizeformat(True)}}.  You need to clear out some
+of your data to reduce your usage below your limit.""")
+    inode_text = Template("""Your account ({{ai.username}}) has had
+too many files for too long.  You cannot create any new files until
+you reduce the number of files in your account.  You currently have
+{{ai.inodes_used}} files.  Your limit is {{ai.inode_quota}} files.
+You need to delete some of your files to reduce your usage below your
+limit.""")
+    footer = STD_FOOTER
+
+class TemplateUnderQuota:
+    subject = Template('Your account is back under quota.')
+    header = ''
+    block_text = Template("""Your account ({{ai.username}}) is now
+under quota.  Any restrictions on use of your account that were the
+result of going over your limits have been removed.""")
+    inode_text = Template("""Your account ({{ai.username}}) is now
+under quota.  Any restrictions on use of your account that were the
+result of going over your limits have been removed.""")
+    footer = STD_FOOTER
