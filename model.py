@@ -21,6 +21,8 @@ class QuotaState(Enum):
     hard_limit = 3
 
 def current_state(used, quota, limit, grace_expires):
+    if quota == 0:
+        return QuotaState.ok
     if used < quota:
         return QuotaState.ok
     if used < limit and datetime.now() < grace_expires:
