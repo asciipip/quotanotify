@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
+from model import *
+
 import pwd
 
 from pysqlite2 import dbapi2 as sqlite  # https://github.com/ghaering/pysqlite
-
-from model import *
 
 cache = sqlite.connect('cache')
 cur = cache.cursor()
