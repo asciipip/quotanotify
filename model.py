@@ -125,6 +125,14 @@ class AccountInfo:
 
         return ai
 
+    @staticmethod
+    def all(db_cursor):
+        """Generator that yields all entries in the cache."""
+        tmp_cur = db_cursor.connection.cursor()
+        tmp_cur.execute('SELECT filesystem, uid FROM entry')
+        for row in tmp_cur:
+            yield AccountInfo(row[0], row[1], db_cursor)
+
     def update(self):
         self.db_cursor.execute(
             """UPDATE entry
