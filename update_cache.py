@@ -2,11 +2,20 @@
 
 from model import *
 
+import optparse
+import os
 import pwd
 
 from pysqlite2 import dbapi2 as sqlite  # https://github.com/ghaering/pysqlite
 
-cache = sqlite.connect('cache')
+parser = optparse.OptionParser()
+parser.add_option(
+    '-c', '--cache',
+    default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'cache'),
+    help='Location of the quota cache file.')
+(options, args) = parser.parse_args()
+
+cache = sqlite.connect(options.cache)
 cur = cache.cursor()
 
 # Get mounted filesystems with user quotas.
