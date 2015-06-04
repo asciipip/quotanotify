@@ -210,3 +210,15 @@ class AccountInfo:
         return notification_state(self.inode_ok_notify,
                                   self.inode_quota_notify,
                                   self.inode_hard_notify)
+
+    @property
+    def bytes_used(self):
+        return self.blocks_used * 1024
+
+    @property
+    def bytes_quota(self):
+        return self.block_quota * 1024
+
+    @property
+    def bytes_limit(self):
+        return self.block_limit * 1024
