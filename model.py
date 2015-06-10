@@ -15,10 +15,7 @@ def parse_datetime(field):
     else:
         return None
 
-class QuotaState(Enum):
-    under_quota = 1
-    soft_limit = 2
-    hard_limit = 3
+QuotaState = Enum('under_quota', 'soft_limit', 'hard_limit', 'grace_expired')
 
 def current_state(used, quota, limit, grace_expires):
     if quota == 0:
@@ -27,13 +24,15 @@ def current_state(used, quota, limit, grace_expires):
         return QuotaState.under_quota
     if used < limit and datetime.now() < grace_expires:
         return QuotaState.soft_limit
-    return QuotaState.hard_limit
+    if used >= limit:
+        return QuotaState.hard_limit
+    return QuotaState.grace_expired
 
 def notification_state(ok_notify, quota_notify, hard_notify):
     # Go with whichever notification was sent last.
     pairs = [(ok_notify, QuotaState.under_quota),
              (quota_notify, QuotaState.soft_limit),
-             (hard_notify, QuotaState.hard_limit)]
+             (hard_notify, QuotaState.grace_expired)]
     sorted_pairs = sorted([p for p in pairs if p[0]])
     if len(sorted_pairs) > 0:
         return sorted_pairs[-1][1]
