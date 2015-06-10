@@ -1,55 +1,32 @@
 #!/usr/bin/env python
 
+from config import *
 from model import *
 from templates import *
 
 import email.MIMEText
-import optparse
-import os
-import platform
 import smtplib
 import textwrap
 
 from pysqlite2 import dbapi2 as sqlite  # https://github.com/ghaering/pysqlite
 
-# Don't send notifications more often than this.
-NOTIFICATION_HYSTERESIS = timedelta(minutes=30)
-
-parser = optparse.OptionParser()
-parser.add_option(
-    '-c', '--cache',
-    default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'cache'),
-    help='Location of the quota cache file.')
-parser.add_option(
-    '-s', '--smtp-host', default='localhost',
-    help='Host for sending SMTP mail.  Defaults to localhost.')
-parser.add_option(
-    '-f', '--from-address', default='root',
-    help='Email address to use in From: header of sent emails.  Defaults to root.')
-parser.add_option(
-    '-r', '--reply-to',
-    help='Use if you want the emails to have a Reply-To: header.')
-parser.add_option(
-    '-d', '--domain', default=platform.node(),
-    help='Domain to append to usernames to get email addresses.  Defaults to this system\'s hostname.')
-(options, args) = parser.parse_args()
-
-cache = sqlite.connect(options.cache)
+config = load_config_file()
+cache = sqlite.connect(config['cache'])
 cur = cache.cursor()
 
 def send_email(to, subject, body):
-    to_addr = '%s@%s' % (to, options.domain)
-    if '@' in options.from_address:
-        from_addr = options.from_address
+    to_addr = '%s@%s' % (to, config['domain'])
+    if '@' in config['from_address']:
+        from_addr = config['from_address']
     else:
-        from_addr = '%s@%s' % (options.from_address, options.domain)
+        from_addr = '%s@%s' % (config['from_address'], config['domain'])
     msg = email.MIMEText.MIMEText(body)
     msg['subject'] = subject
     msg['From'] = from_addr
     msg['To'] = to_addr
-    if options.reply_to:
-        msg['Reply-To'] = options.reply_to
-    s = smtplib.SMTP(options.smtp_host)
+    if config['reply_to']:
+        msg['Reply-To'] = config['reply_to']
+    s = smtplib.SMTP(config['smtp_host'])
     s.sendmail(from_addr, to_addr, msg.as_string())
     s.quit()
 
@@ -67,7 +44,7 @@ def pick_template(notification_state, current_state, grace_expires, quota_notify
             return TemplateGraceExpired
     if current_state == QuotaState.under_quota and \
             notification_state != QuotaState.under_quota and \
-            (datetime.now() - quota_notify) > NOTIFICATION_HYSTERESIS:
+            (datetime.now() - quota_notify) > config['notification_hysteresis']:
         return TemplateUnderQuota
     return None
 

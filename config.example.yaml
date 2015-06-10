@@ -1,0 +1,43 @@
+## By default, the scripts will look for this file as one of:
+##  * /etc/quotanotify/config.yaml
+##  * /etc/quotanotify.yaml
+##  * config.yaml  (In the same directory as the script.)
+##
+## You can explicitly give another location with the --config command line
+## option.
+
+## We'll document the default values for things here.  All non-absolute paths
+## are considered to be relative to the location of the configuration file.
+
+## Where the quota cache file lives.  Defaults to a file named "cache" in the
+## same directory as the config file.
+#cache: cache
+
+## The SMTP server used to send mail.
+#smtp_host: localhost
+
+## The email address to send email from.
+#from_address: root
+
+## If replies to the notification emails should go somewhere other than to the
+## sender, specify that here.  (The default is an empty value and signifies
+## that no Reply-To: header should be used.)
+#reply_to: 
+
+## The domain name that should be attached to usernames to turn them into email
+## addresses.  e.g. if domain is "example.com" and the person with username
+## "foo" is over quota, email will be sent to "foo@example.com".
+##
+## If "from_address", above, is not a complete email address, the domain will be
+## appended to it, too.
+##
+## The default is the FQDN of the host where the script is running.
+#domain: example.com
+
+## How long we should wait, in minutes, between someone going under quota and
+## the notification email being sent.  Setting this too short could result in
+## someone being inundated with emails if they rapidly add and delete data in a
+## way that causes them to repeatedly exceed and then go back under their quota.
+## Setting it too long can result in a long delay between someone fixing their
+## quota and then getting the confirmation email.
+#notification_hysteresis: 30

@@ -2,7 +2,8 @@
 
 from pysqlite2 import dbapi2 as sqlite
 
-cache = sqlite.connect('cache')
+config = load_config_file()
+cache = sqlite.connect(config['cache'])
 
 TABLE_DEFINITION = """
 CREATE TABLE IF NOT EXISTS entry (
