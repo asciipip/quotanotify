@@ -55,15 +55,15 @@ def send_email(to, subject, body):
 
 def pick_template(notification_state, current_state, grace_expires, quota_notify, hard_notify, ok_notify):
     states = (notification_state, current_state)
-    if states == (QuotaState.ok, QuotaState.soft_limit):
+    if states == (QuotaState.under_quota, QuotaState.soft_limit):
         return TemplateOverQuota
-    elif states == (QuotaState.ok, QuotaState.hard_limit):
+    elif states == (QuotaState.under_quota, QuotaState.hard_limit):
         if grace_expires < datetime.now():
             # This branch is really unlikely, but just in case...
             return TemplateGraceExpired
         else:
             return TemplateHardLimit
-    elif states == (QuotaState.soft_limit, QuotaState.ok):
+    elif states == (QuotaState.soft_limit, QuotaState.under_quota):
         if (datetime.now() - quota_notify) > NOTIFICATION_HYSTERESIS:
             return TemplateUnderQuota
     elif states == (QuotaState.soft_limit, QuotaState.hard_limit):
@@ -71,7 +71,7 @@ def pick_template(notification_state, current_state, grace_expires, quota_notify
             return TemplateGraceExpired
         else:
             return TemplateHardLimit
-    elif states == (QuotaState.hard_limit, QuotaState.ok):
+    elif states == (QuotaState.hard_limit, QuotaState.under_quota):
         if (datetime.now() - hard_notify) > NOTIFICATION_HYSTERESIS:
             return TemplateUnderQuota
     elif states == (QuotaState.hard_limit, QuotaState.soft_limit):
