@@ -50,6 +50,49 @@ class AccountInfo:
         except KeyError:
             self.username = '#%d' % self.uid
 
+        self.refresh()
+            
+    @staticmethod
+    def from_quotatool(filesystem, uid, db_cursor):
+        ai = AccountInfo(filesystem, uid, db_cursor)
+
+        qt = subprocess.Popen(['quotatool', '-u', str(uid), '-d', filesystem],
+                              stdout=subprocess.PIPE)
+        stdout, stderr = qt.communicate()
+        qt_uid, qt_fs, \
+            blocks_used, block_quota, block_limit, block_grace, \
+            inodes_used, inode_quota, inode_limit, inode_grace = \
+            stdout.split()
+
+        ai.blocks_used = int(blocks_used)
+        ai.block_quota = int(block_quota)
+        ai.block_limit = int(block_limit)
+        ai.inodes_used = int(inodes_used)
+        ai.inode_quota = int(inode_quota)
+        ai.inode_limit = int(inode_limit)
+
+        if int(block_grace) == 0:
+            ai.block_grace_expires = None
+        else:
+            ai.block_grace_expires = \
+                datetime.now().replace(microsecond=0) + timedelta(seconds=int(block_grace))
+        if int(inode_grace) == 0:
+            ai.inode_grace_expires = None
+        else:
+            ai.inode_grace_expires = \
+                datetime.now().replace(microsecond=0) + timedelta(seconds=int(inode_grace))
+
+        return ai
+
+    @staticmethod
+    def all(db_cursor):
+        """Generator that yields all entries in the cache."""
+        tmp_cur = db_cursor.connection.cursor()
+        tmp_cur.execute('SELECT filesystem, uid FROM entry')
+        for row in tmp_cur:
+            yield AccountInfo(row[0], row[1], db_cursor)
+
+    def refresh(self):
         self.db_cursor.execute('SELECT * FROM entry WHERE filesystem = ? AND uid = ?',
                                (self.filesystem, self.uid))
         # RHEL 5's pysqlite is too old to have indexing by field name, so we
@@ -91,46 +134,6 @@ class AccountInfo:
             self.inode_quota_notify = None
             self.inode_hard_notify = None
             self.inode_ok_notify = None
-            
-    @staticmethod
-    def from_quotatool(filesystem, uid, db_cursor):
-        ai = AccountInfo(filesystem, uid, db_cursor)
-
-        qt = subprocess.Popen(['quotatool', '-u', str(uid), '-d', filesystem],
-                              stdout=subprocess.PIPE)
-        stdout, stderr = qt.communicate()
-        qt_uid, qt_fs, \
-            blocks_used, block_quota, block_limit, block_grace, \
-            inodes_used, inode_quota, inode_limit, inode_grace = \
-            stdout.split()
-
-        ai.blocks_used = int(blocks_used)
-        ai.block_quota = int(block_quota)
-        ai.block_limit = int(block_limit)
-        ai.inodes_used = int(inodes_used)
-        ai.inode_quota = int(inode_quota)
-        ai.inode_limit = int(inode_limit)
-
-        if int(block_grace) == 0:
-            ai.block_grace_expires = None
-        else:
-            ai.block_grace_expires = \
-                datetime.now().replace(microsecond=0) + timedelta(seconds=int(block_grace))
-        if int(inode_grace) == 0:
-            ai.inode_grace_expires = None
-        else:
-            ai.inode_grace_expires = \
-                datetime.now().replace(microsecond=0) + timedelta(seconds=int(inode_grace))
-
-        return ai
-
-    @staticmethod
-    def all(db_cursor):
-        """Generator that yields all entries in the cache."""
-        tmp_cur = db_cursor.connection.cursor()
-        tmp_cur.execute('SELECT filesystem, uid FROM entry')
-        for row in tmp_cur:
-            yield AccountInfo(row[0], row[1], db_cursor)
 
     def update(self):
         self.db_cursor.execute(
