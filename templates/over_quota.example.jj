@@ -1,0 +1,17 @@
+{% filter wordwrap(74) -%}
+We're sorry to have to tell you this, but you've exceeded the disk
+usage limits on one or more of our servers.  {{ summary }}
+{% endfilter %}
+
+{% for detail in details -%}
+{{ detail|wordwrap(74) }}
+
+{% endfor -%}
+
+Once your account goes under quota you should receive an email
+confirming that fact; at that point your account should be okay.
+
+If you have any questions or problems with reducing your quota, please
+don't hesitate to contact us via the usual support mechanisms.
+
+Thanks very much for your cooperation!
