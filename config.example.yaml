@@ -1,13 +1,13 @@
-## By default, the scripts will look for this file as one of:
-##  * /etc/quotanotify/config.yaml
-##  * /etc/quotanotify.yaml
-##  * config.yaml  (In the same directory as the script.)
-##
-## You can explicitly give another location with the --config command line
-## option.
+### By default, the scripts will look for this file as one of:
+###  * /etc/quotanotify/config.yaml
+###  * /etc/quotanotify.yaml
+###  * config.yaml  (In the same directory as the script.)
+###
+### You can explicitly give another location with the --config command line
+### option.
 
-## We'll document the default values for things here.  All non-absolute paths
-## are considered to be relative to the location of the configuration file.
+### We'll document the default values for things here.  All non-absolute paths
+### are considered to be relative to the location of the configuration file.
 
 ## Where the quota cache file lives.  Defaults to a file named "cache" in the
 ## same directory as the config file.
