@@ -7,6 +7,7 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
+from config import *
 
 from pysqlite2 import dbapi2 as sqlite
 
