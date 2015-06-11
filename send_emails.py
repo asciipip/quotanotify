@@ -93,6 +93,26 @@ def handle_state_change(ai):
         worst_state = changes[0][0]
         message = jj_env.get_template(config['templates'][worst_state.key]['main_file']).render(ai=ai, summary=summary, details=details)
         send_email('phil', jinja2.Template(config['templates'][worst_state.key]['subject']).render(ai=ai), message)
+        ai.refresh()
+        # FIXME: Get rid of this horrid code.
+        for new_state, old_state, area in changes:
+            if new_state == QuotaState.under_quota:
+                if area == 'block':
+                    ai.block_ok_notify = datetime.now()
+                elif area == 'inode':
+                    ai.inode_ok_notify = datetime.now()
+            elif new_state == QuotaState.soft_limit:
+                if area == 'block':
+                    ai.block_quota_notify = datetime.now()
+                elif area == 'inode':
+                    ai.inode_quota_notify = datetime.now()
+            elif new_state in [QuotaState.hard_limit, QuotaState.grace_expired]:
+                if area == 'block':
+                    ai.block_hard_notify = datetime.now()
+                elif area == 'inode':
+                    ai.inode_hard_notify = datetime.now()
+        ai.update()
 
 for ai in AccountInfo.all(cur):
     handle_state_change(ai)
+cache.commit()

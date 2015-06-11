@@ -95,9 +95,9 @@ class AccountInfo:
     @staticmethod
     def all(db_cursor):
         """Generator that yields all entries in the cache."""
-        tmp_cur = db_cursor.connection.cursor()
-        tmp_cur.execute('SELECT filesystem, uid FROM entry')
-        for row in tmp_cur:
+        db_cursor.execute('SELECT filesystem, uid FROM entry')
+        results = db_cursor.fetchall()
+        for row in results:
             yield AccountInfo(row[0], row[1], db_cursor)
 
     def refresh(self):
