@@ -224,3 +224,14 @@ class AccountInfo:
     @property
     def bytes_limit(self):
         return self.block_limit * 1024
+
+    @property
+    def last_notification(self):
+        all_notifications = [
+            self.block_ok_notify, self.block_quota_notify, self.block_hard_notify,
+            self.inode_ok_notify, self.inode_quota_notify, self.inode_hard_notify]
+        sent_notifications = [d for d in all_notifications if d]
+        if len(sent_notifications) > 0:
+            return sorted(sent_notifications)[-1]
+        else:
+            return None
