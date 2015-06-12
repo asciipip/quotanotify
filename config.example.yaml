@@ -32,7 +32,7 @@
 ## appended to it, too.
 ##
 ## The default is the FQDN of the host where the script is running.
-#domain: example.com
+#domain: fileserver.example.com
 
 ## How long we should wait, in minutes, between someone going under quota and
 ## the notification email being sent.  Setting this too short could result in
@@ -41,6 +41,14 @@
 ## Setting it too long can result in a long delay between someone fixing their
 ## quota and then getting the confirmation email.
 #notification_hysteresis: 30
+
+## Whether to operate in debugging mode.  You shouldn't need this unless you're
+## doing development on this code.  Value should be either "true" or "false".
+#debug: false
+
+## If debug mode is on, all emails will be sent to the `from_address` setting.
+## The following setting allows you to override that.
+#debug_mail_recipient: root
 
 ### Email templates.
 

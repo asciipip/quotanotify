@@ -99,7 +99,11 @@ def handle_state_change(ai):
             details.append(jinja2.Template(config['templates'][q.current_state.key]['%s_detail' % q.quota_type.key]).render(account=ai, quota=q))
         worst_state = quotas[0].current_state.key
         message = jj_env.get_template(config['templates'][worst_state]['main_file']).render(account=ai, summary=summary, details=details)
-        send_email('phil', jinja2.Template(config['templates'][worst_state]['subject']).render(account=ai), message)
+        if config['debug']:
+            recipient = config['debug_mail_recipient']
+        else:
+            recipient = ai.username
+        send_email(recipient, jinja2.Template(config['templates'][worst_state]['subject']).render(account=ai), message)
         ai.set_notify(quotas)
 
 for ai in AccountInfo.all(cur):

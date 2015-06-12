@@ -17,6 +17,8 @@ import yaml  # http://pyyaml.org
 
 DEFAULTS = {
     'cache': 'cache',
+    'debug': False,
+    'debug_mail_recipient': 'root',
     'domain': platform.node(),
     'from_address': 'root',
     'notification_hysteresis': 30,
