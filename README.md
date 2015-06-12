@@ -12,6 +12,10 @@ following events:
    period expires.
  * The account goes back under all of its quotas.
 
+Group quotas are not yet supported.  (Pull requests welcome; the
+primary author does not use group quotas so it might be a while before
+he has time to add them.)
+
 
 ## Installing
 
