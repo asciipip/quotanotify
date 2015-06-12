@@ -13,7 +13,7 @@ from model import *
 
 import email.MIMEText
 import smtplib
-import textwrap
+import syslog
 
 import jinja2  # http://jinja.pocoo.org
 
@@ -104,6 +104,11 @@ def handle_state_change(ai):
         else:
             recipient = ai.username
         send_email(recipient, jinja2.Template(config['templates'][worst_state]['subject']).render(account=ai), message)
+        log_message = 'Sent email to %s: %s' % (ai.username, ', '.join(['%s %s %s %s/%s' % (q.filesystem, q.quota_type.key, q.current_state.key, q.used, q.soft_limit) for q in quotas]))
+        if config['debug']:
+            print log_message
+        else:
+            syslog.syslog(syslog.LOG_INFO | syslog.LOG_USER, log_message)
         ai.set_notify(quotas)
 
 for ai in AccountInfo.all(cur):
