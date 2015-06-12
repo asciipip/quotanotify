@@ -17,11 +17,11 @@ import yaml  # http://pyyaml.org
 
 DEFAULTS = {
     'cache': 'cache',
-    'smtp_host': 'localhost',
-    'from_address': 'root',
-    'reply_to': None,
     'domain': platform.node(),
+    'from_address': 'root',
     'notification_hysteresis': 30,
+    'reply_to': None,
+    'smtp_host': 'localhost',
 }
 
 def find_config_file():
