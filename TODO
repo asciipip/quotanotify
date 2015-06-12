@@ -1,2 +1,4 @@
  * Support group quotas.
  * Web service and desktop notification client.
+ * Make the shared code into a Python module for better packaging.
+ * Generate RPMs and .debs.
