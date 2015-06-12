@@ -41,77 +41,66 @@ def send_email(to, subject, body):
     s.sendmail(from_addr, to_addr, msg.as_string())
     s.quit()
 
-def send_email_p(changes, last_notification):
+def send_email_p(quotas):
+    if len(quotas) == 0:
+        return False
+
     # If any state has gotten worse, send an email.
-    for new_state, old_state, area in changes:
-        if new_state > old_state and (old_state, new_state) != (QuotaState.hard_limit, QuotaState.grace_expired):
+    for q in quotas:
+        if q.current_state > q.last_notify_state and \
+                (q.current_state, q.last_notify_state) != (QuotaState.hard_limit, QuotaState.grace_expired):
             return True
     # No state is worse than it was.
+
     # Only send an email if all states are under quota...
-    for new_state, old_state, area in changes:
-        if new_state != QuotaState.under_quota:
+    for q in quotas:
+        if q.current_state != QuotaState.under_quota:
             return False
     # ...and at least one old state was over quota somehow.
-    for new_state, old_state, area in changes:
-        if old_state != QuotaState.under_quota:
+    last_notification = max([q.last_notify_date for q in quotas])
+    for q in quotas:
+        if q.last_notify_state != QuotaState.under_quota:
             # Only send email if notification hysteresis has passed.
             return (datetime.now() - last_notification) > timedelta(minutes=config['notification_hysteresis'])
+
     # At this point, we've covered all of the circumstances under which we'd
     # want to send an email, so the default is not to send one.
     return False
 
 def handle_state_change(ai):
-    changes = [(ai.current_block_state, ai.notification_block_state, 'block'),
-               (ai.current_inode_state, ai.notification_inode_state, 'inode')]
-    # See if the person is currently under quota.
-    under_quota = True
-    for new_state, old_state, area in changes:
-        if new_state != QuotaState.under_quota:
-            under_quota = False
-    # If they're not under quota, we only care about the areas where they're
+    # Take all of the quota objects for the current account, throw out the ones
+    # where there's no quota, and sort the rest by severity (worst first) and
+    # then by anough other keys to guarantee a stable ordering.
+    quotas_to_sort = [(q.current_state.index * -1, q.last_notify_state, q.last_notify_date, q.filesystem, q.quota_type, q) for q in ai.iter_quotas if q.current_state != QuotaState.no_quota]
+    quotas = [t[-1] for t in sorted(quotas_to_sort)]
+
+    # See if they're over quota anywhere.
+    over_quotas = [q for q in quotas if q.current_state != QuotaState.under_quota]
+    # If they're over quota at all, we only care about the areas where they're
     # over.
-    if not under_quota:
-        changes = [c for c in changes if c[0] != QuotaState.under_quota]
-    changes.sort()
-    changes.reverse()
-    if send_email_p(changes, ai.last_notification):
+    if len(over_quotas) > 0:
+        quotas = over_quotas
+
+    if send_email_p(quotas):
         summary = ''
         details = []
-        for new_state, old_state, area in changes:
-            if old_state == new_state:
-                template_key = '%s_summary_old' % area
+        for q in quotas:
+            if q.current_state == q.last_notify_state:
+                template_key = '%s_summary_old' % q.quota_type.key
             else:
-                template_key = '%s_summary_new' % area
-            template_str = config['templates'][new_state.key][template_key]
+                template_key = '%s_summary_new' % q.quota_type.key
+            template_str = config['templates'][q.current_state.key][template_key]
             if template_str:
-                sum_text = jinja2.Template(config['templates'][new_state.key][template_key]).render(ai=ai)
+                sum_text = jinja2.Template(template_str).render(account=ai, quota=q)
                 if summary == '':
                     summary = sum_text
                 else:
                     summary += '  Also, %s%s' % (sum_text[0].lower(), sum_text[1:])
-            details.append(jinja2.Template(config['templates'][new_state.key]['%s_detail' % area]).render(ai=ai))
-        worst_state = changes[0][0]
-        message = jj_env.get_template(config['templates'][worst_state.key]['main_file']).render(ai=ai, summary=summary, details=details)
-        send_email('phil', jinja2.Template(config['templates'][worst_state.key]['subject']).render(ai=ai), message)
-        ai.refresh()
-        # FIXME: Get rid of this horrid code.
-        for new_state, old_state, area in changes:
-            if new_state == QuotaState.under_quota:
-                if area == 'block':
-                    ai.block_ok_notify = datetime.now()
-                elif area == 'inode':
-                    ai.inode_ok_notify = datetime.now()
-            elif new_state == QuotaState.soft_limit:
-                if area == 'block':
-                    ai.block_quota_notify = datetime.now()
-                elif area == 'inode':
-                    ai.inode_quota_notify = datetime.now()
-            elif new_state in [QuotaState.hard_limit, QuotaState.grace_expired]:
-                if area == 'block':
-                    ai.block_hard_notify = datetime.now()
-                elif area == 'inode':
-                    ai.inode_hard_notify = datetime.now()
-        ai.update()
+            details.append(jinja2.Template(config['templates'][q.current_state.key]['%s_detail' % q.quota_type.key]).render(account=ai, quota=q))
+        worst_state = quotas[0].current_state.key
+        message = jj_env.get_template(config['templates'][worst_state]['main_file']).render(account=ai, summary=summary, details=details)
+        send_email('phil', jinja2.Template(config['templates'][worst_state]['subject']).render(account=ai), message)
+        ai.set_notify(quotas)
 
 for ai in AccountInfo.all(cur):
     handle_state_change(ai)

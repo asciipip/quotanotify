@@ -2,6 +2,8 @@
 Your account ({{ai.username}}) is now back under its quota.  Any restrictions on use of your account that were the result of going over your limits have been removed.
 {% endfilter %}
 
+For reference:
+
 {% for detail in details -%}
 {{ detail|wordwrap(74) }}
 

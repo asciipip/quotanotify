@@ -7,8 +7,9 @@ We're sorry to have to tell you this, but you've exceeded the disk usage limits 
 
 {% endfor -%}
 
-Once your account goes under quota you should receive an email
-confirming that fact; at that point your account should be okay.
+Once you've reduced your disk usage sufficiently you should receive an
+email indicating that you're back under quota; at that point your
+account should be okay.
 
 If you have any questions or problems with reducing your quota, please
 don't hesitate to contact us via the usual support mechanisms.

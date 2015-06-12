@@ -117,8 +117,9 @@ Each template has the following settings:
  * `main_file` - A file that gives the general template for the body
    of emails sent to people.  When the template is generated, it is
    given three parameters:
-   * `ai` - The `AccountInfo` object that contains information about
-     the account being emailed.  See `model.py` for its properties.
+   * `account` - The `AccountInfo` object that contains information
+     about the account being emailed.  See `model.py` for its
+     properties.
    * `summary` - A string summarizing each of the areas where the
      account is over quota.
    * `details` - A list of strings, each of which gives details about
@@ -131,11 +132,18 @@ Each template has the following settings:
    owner has already been notified about that problem but another
    email is being sent because of a new problem in a different quota
    area.  (e.g. They've been over quota for block usage but they just
-   went over quota for inode usage, too.)
+   went over quota for inode usage, too.)  These templates are passed
+   two parameters:
+   * `account` - An `AccountInfo` object that contains information
+     about the account being emailed.
+   * `quota` - A `QuotaInfo` object that contains information about
+     the specific quota being addressed.  See its docstring in
+     `model.py` for descriptions of its properties.
  * `block_detail`, `inode_detail` - Template strings that should give
    details about the problem.  It would be appropriate to describe,
    for instance, the exact amount of space the account is using and
-   what its current limit is.
+   what its current limit is.  Like the summary templates, these are
+   given two parameters: `account` and `quota`.
 
 You can look at the `config.example.yaml` file in this project for
 example templates.
